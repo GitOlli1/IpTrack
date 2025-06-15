@@ -19,6 +19,10 @@ export const IpTracken = () => {
             setData(response);
             setIsLoading(false);
         })
+        .catch((err) => {
+            console.log(err);
+            setIsLoading(false);
+        })
     }
 
     return (
@@ -26,7 +30,7 @@ export const IpTracken = () => {
         <div>IP Tracken:</div>
         <Form onSubmit={handleSubmit}>
             <Form.Control
-            placeholder="8.8.8.8"
+            placeholder="z.B. 8.8.8.8"
             value={ipAddress}
             onChange={(e) => setIpAddress(e.target.value)}
             />

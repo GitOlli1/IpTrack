@@ -20,3 +20,14 @@ export interface IPData {
         longitude: number;
     }
 }
+
+export interface DomainData {
+    domainName: string;
+    handle: string;
+    status: string;
+    registrar: string;
+    registrationDate: string;
+    lastUpdated: string;
+    restfulLink: string;
+    ip: string;
+}

@@ -81,3 +81,60 @@ export const GetDataForIP = async (ipAddress: string): Promise<IPData> => {
         throw err;
     }
 }
+
+import type { DomainData } from "./Interface";
+
+export const GetDataForDomain = async (domainName: string): Promise<DomainData & { ip?: string }> => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+
+    try {
+        // Für .com und .net via Verisign (CORS-fähig aus Browser)
+        const tld = domainName.split('.').pop()?.toLowerCase();
+        let rdapUrl = '';
+
+        if (tld === 'com' || tld === 'net') {
+            rdapUrl = `https://rdap.verisign.com/com/v1/domain/${domainName}`;
+        } else {
+            throw new Error(`Unsupported TLD or CORS restriction for TLD: ${tld}`);
+        }
+
+        const response = await fetch(rdapUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (!response.ok) throw new Error(`RDAP fetch failed: ${response.status}`);
+
+        const data = await response.json();
+
+        // IP via Google DNS over HTTPS holen
+        const dnsResponse = await fetch(`https://dns.google/resolve?name=${domainName}&type=A`);
+        if (!dnsResponse.ok) throw new Error(`DNS lookup failed: ${dnsResponse.status}`);
+
+        const dnsData = await dnsResponse.json();
+        const answer = dnsData.Answer?.find((a: any) => a.type === 1); // A record
+        const ip = answer?.data || '';
+
+        // Parsen relevanter Felder aus RDAP JSON
+        const name = data.ldhName || '';
+        const handle = data.handle || '';
+        const status = data.status?.join(', ') || '';
+        const registrar = data.entities?.find((e: any) => e.roles?.includes('registrar'))?.vcardArray?.[1]?.find((v: any[]) => v[0] === 'fn')?.[3] || '';
+        const registrationDate = data.events?.find((e: any) => e.eventAction === 'registration')?.eventDate?.split('T')[0] || '';
+        const lastUpdated = data.events?.find((e: any) => e.eventAction === 'last changed')?.eventDate?.split('T')[0] || '';
+
+        return {
+            domainName: name,
+            handle: handle,
+            status: status,
+            registrar: registrar,
+            registrationDate: registrationDate,
+            lastUpdated: lastUpdated,
+            restfulLink: data.links?.[0]?.href || '',
+            ip,
+        };
+
+    } catch (err) {
+        console.error("Error fetching domain data:", err);
+        throw err;
+    }
+};

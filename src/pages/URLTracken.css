@@ -1,0 +1,5 @@
+.ip-tracken-button-style:disabled {
+  background-color: #ccc;  /* hellgrau */
+  cursor: not-allowed;
+  opacity: 0.6;
+}
