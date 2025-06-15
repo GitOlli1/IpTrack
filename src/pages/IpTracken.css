@@ -1,0 +1,35 @@
+.ip-tracken-button-position {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.ip-tracken-button-style {
+    border: none;
+    padding: 5px;
+    border-radius: 5px;
+    background: #0e5d97;
+    color: white;
+}
+
+.ip-tracken-button-style:hover {
+    background: #D3D3D3;
+    color: black;
+}
+
+.ip-tracker-data-container {
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+}
+
+.ip-tracker-comment {
+    padding: 5px;
+}
+
+.ip-tracker-comment-container {
+    border: 0.5px solid;
+    border-radius: 5px;
+    margin-top: 10px;
+    padding: 5px;
+}
