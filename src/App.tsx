@@ -1,12 +1,14 @@
 import './App.css'
-import logo from './../public/iptrack_logo.png';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import { Body } from './pages/Body';
+import { Header } from './pages/Header';
 
 function App() {
 
   return (
     <>
-      <div>IpTrack:</div>
-      <img className="logo-size" src={logo}/>
+      <Header/>
+      <Body/>
     </>
   )
 }

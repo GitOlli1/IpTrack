@@ -1,0 +1,15 @@
+
+.body-position {
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+}
+
+.body-size {
+    width: 80%;
+    padding: 10px;
+}
+
+.nav-link {
+    color: black !important;
+}
