@@ -1,90 +1,83 @@
-export const GetDataForIP = async (ipAddress: string) => {
-    console.log(ipAddress);
+import type { IPData } from "./Interface";
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
+export const GetDataForIP = async (ipAddress: string): Promise<IPData> => {
+    const arinController = new AbortController();
+    const geoController = new AbortController();
+
+    const arinTimeout = setTimeout(() => arinController.abort(), 3000);
+    const geoTimeout = setTimeout(() => geoController.abort(), 3000);
 
     try {
-        const response = await fetch(`https://whois.arin.net/rest/ip/${ipAddress}`, {
-            method: 'GET',
-            signal: controller.signal
+        // ARIN WHOIS
+        const arinRes = await fetch(`https://whois.arin.net/rest/ip/${ipAddress}`, {
+            signal: arinController.signal
         });
+        clearTimeout(arinTimeout);
 
-        clearTimeout(timeoutId);
+        if (!arinRes.ok) throw new Error(`ARIN fetch failed: ${arinRes.status}`);
 
-        if (!response.ok) {
-            throw new Error(`Something went wrong: ${response.status}`);
-        }
-
-        const text = await response.text();
-        console.log(text);
-
+        const arinText = await arinRes.text();
         const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, "application/xml");
-
+        const xmlDoc = parser.parseFromString(arinText, "application/xml");
         const ns = "https://www.arin.net/whoisrws/core/v1";
 
-        // Hilfsfunktion zum Auslesen von Text aus erstem Tag im Namespace
-        const getText = (tag: string) =>
-            xmlDoc.getElementsByTagNameNS(ns, tag)[0]?.textContent?.trim() || '';
+        const getText = (tag: string) => xmlDoc.getElementsByTagNameNS(ns, tag)[0]?.textContent || '';
 
-        // Kommentartexte aus <comment><line>...</line></comment> zusammensetzen
-        const commentElement = xmlDoc.getElementsByTagNameNS(ns, "comment")[0];
-        let comments = "";
-        if (commentElement) {
-            const lines = commentElement.getElementsByTagNameNS(ns, "line");
-            const commentLines: string[] = [];
-            for (let i = 0; i < lines.length; i++) {
-                const lineText = lines[i].textContent?.trim();
-                if (lineText) commentLines.push(lineText);
-            }
-            comments = commentLines.join("\n");
-        }
-
-        // netBlock ist unter netBlocks/netBlock
         const netBlock = xmlDoc.getElementsByTagNameNS(ns, "netBlock")[0];
-        const startAddress = netBlock?.getElementsByTagNameNS(ns, "startAddress")[0]?.textContent?.trim() || '';
-        const endAddress = netBlock?.getElementsByTagNameNS(ns, "endAddress")[0]?.textContent?.trim() || '';
-        const cidr = netBlock?.getElementsByTagNameNS(ns, "cidrLength")[0]?.textContent?.trim() || '';
-        const netType = netBlock?.getElementsByTagNameNS(ns, "type")[0]?.textContent?.trim() || '';
-        const netDescription = netBlock?.getElementsByTagNameNS(ns, "description")[0]?.textContent?.trim() || '';
+        const startAddress = netBlock?.getElementsByTagNameNS(ns, "startAddress")[0]?.textContent || '';
+        const cidr = netBlock?.getElementsByTagNameNS(ns, "cidrLength")[0]?.textContent || '';
+        const netType = netBlock?.getElementsByTagNameNS(ns, "type")[0]?.textContent || '';
 
-        // Org Info aus orgRef-Attributen
-        const orgRef = xmlDoc.getElementsByTagNameNS(ns, "orgRef")[0];
-        const organization = orgRef
-            ? `${orgRef.getAttribute("name") || ''} (${orgRef.getAttribute("handle") || ''})`
-            : '';
+        const comments = Array.from(xmlDoc.getElementsByTagNameNS(ns, "comment"))
+            .flatMap(c => Array.from(c.getElementsByTagNameNS(ns, "line")).map(line => line.textContent))
+            .filter(Boolean)
+            .join(' ');
 
-        // Parent info falls vorhanden (nicht in deinem Beispiel)
-        const parentNetRef = xmlDoc.getElementsByTagNameNS(ns, "parentNetRef")[0];
-        const parent = parentNetRef
-            ? `${parentNetRef.getAttribute("name") || ''} (${parentNetRef.getAttribute("handle") || ''})`
-            : '';
+        // IP Geolocation
+        const geoRes = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
+            signal: geoController.signal
+        });
+        clearTimeout(geoTimeout);
 
-        const result = {
-            netRange: startAddress && endAddress ? `${startAddress} - ${endAddress}` : '',
+        if (!geoRes.ok) throw new Error(`GeoIP fetch failed: ${geoRes.status}`);
+
+        const geoData = await geoRes.json();
+
+        const getOrgInfo = () => {
+             const el = xmlDoc.getElementsByTagNameNS(ns, "orgRef")[0];
+             if (el) {
+                 const handle = el.getAttribute("handle") || '';
+                 const name = el.getAttribute("name") || '';
+                 return `${name} (${handle})`;
+             }
+             return '';
+         }
+
+        return {
+            netRange: `${getText("startAddress")} - ${getText("endAddress")}`,
             cidr: startAddress && cidr ? `${startAddress}/${cidr}` : '',
             name: getText("name"),
             handle: getText("handle"),
-            parent: parent,
+            parent: '', // kann optional ergänzt werden
             netType: netType,
-            originAs: '', // nicht im XML enthalten in deinem Beispiel
-            organization: organization,
-            registrationDate: getText("registrationDate")?.split("T")[0] || '',
-            lastUpdated: getText("updateDate")?.split("T")[0] || '',
-            comments: comments || netDescription || '',
+            originAs: '',
+            organization: getOrgInfo(),
+            registrationDate: getText("registrationDate")?.split("T")[0],
+            lastUpdated: getText("updateDate")?.split("T")[0],
             restfulLink: getText("ref"),
-            seeAlso: [
-                "Related POC records.",
-                "Related organization's POC records.",
-                "Related delegations."
-            ]
+            comments: comments,
+            geo: {
+                ip: geoData.ip,
+                city: geoData.city,
+                region: geoData.region,
+                country: geoData.country_name,
+                latitude: geoData.latitude,
+                longitude: geoData.longitude
+            }
         };
 
-        return result;
-
-    } catch (error) {
-        console.error("Fetch error:", error);
-        throw error;
+    } catch (err) {
+        console.error("Error fetching IP data:", err);
+        throw err;
     }
-};
+}

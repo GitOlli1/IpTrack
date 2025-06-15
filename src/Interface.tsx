@@ -10,5 +10,13 @@ export interface IPData {
     originAs: string,
     parent: string,
     registrationDate: string,
-    restfulLink: string
+    restfulLink: string,
+    geo: {
+        ip: string;
+        city: string;
+        region: string;
+        country: string;
+        latitude: number;
+        longitude: number;
+    }
 }

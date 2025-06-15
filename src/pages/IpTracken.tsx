@@ -48,6 +48,22 @@ export const IpTracken = () => {
                 <Table striped>
                     <tbody>
                         <tr>
+                            <td>Geo IP</td>
+                            <td>{data.geo.ip}</td>
+                        </tr>
+                        <tr>
+                            <td>City</td>
+                            <td>{data.geo.city}</td>
+                        </tr>
+                        <tr>
+                            <td>Region</td>
+                            <td>{data.geo.region}</td>
+                        </tr>
+                        <tr>
+                            <td>Country</td>
+                            <td>{data.geo.country}</td>
+                        </tr>
+                        <tr>
                             <td>Net Range</td>
                             <td>{data?.netRange}</td>
                         </tr>
