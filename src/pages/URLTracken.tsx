@@ -50,7 +50,7 @@ export const URLTracken = () => {
       <Form onSubmit={handleSubmit}>
         <Form.Control
           value={domain}
-          placeholder="z.B. google.de"
+          placeholder="z.B. google.com"
           onChange={(e) => setDomain(e.target.value)}
         />
         <div className="ip-tracken-button-position">
